@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Speaking Practice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+
+<body style="font-family: Arial; text-align:center; padding:20px;">
+
+<h2>🎧 Speaking Practice</h2>
+
+<p style="font-size:14px;">
+👉 Tap 🎤, speak, repeat 5 times<br>
+👉 Toca 🎤, habla y repite 5 veces<br>
+⭐ Earn points and build streaks
+</p>
+
+<select id="mode" onchange="startSet()">
+<option value="letters">🔤 Letters</option>
+<option value="numbers">🔢 Numbers</option>
+<option value="numbers_focus">🎯 13 vs 30</option>
+<option value="minimal">🔊 Minimal Pairs</option>
+<option value="greetings">👋 Greetings</option>
+<option value="expressions">💬 Expressions</option>
+<option value="basic_words">🧩 Basic Words</option>
+<option value="pronouns">👤 Pronouns</option>
+<option value="questions">❓ Question Words</option>
+<option value="prepositions">📍 Position Words</option>
+<option value="family">👨‍👩‍👧 Family</option>
+<option value="jobs">👷 Jobs</option>
+<option value="verbs">🔁 Verbs</option>
+<option value="adjectives">🎨 Adjectives</option>
+<option value="colors">🎨 Colors</option>
+<option value="food">🍔 Food</option>
+<option value="home">🏠 Home</option>
+<option value="school">🎓 School</option>
+<option value="places">📍 Places</option>
+<option value="transport">🚌 Transport</option>
+<option value="time">⏰ Time</option>
+<option value="sports_leisure">⚽ Leisure</option>
+<option value="clothes">👕 Clothes</option>
+<option value="phrases">🗣️ Phrases</option>
+</select>
+
+<h1 id="word" style="font-size:42px; margin:20px;">Ready</h1>
+
+<p><b>🎯 You must repeat 5 times!</b><br><b>Debes repetir 5 veces</b></p>
+
+<p>Repetitions: <span id="count">0</span> / 5</p>
+<p>⭐ Score: <span id="score">0</span></p>
+<p>🔥 Streak: <span id="streak">0</span></p>
+
+<button onclick="playAudio(0.7)">🐢 Slow</button>
+<button onclick="playAudio(1)">⚡ Normal</button>
+
+<br><br>
+
+<button onclick="startRecording()" style="font-size:20px; padding:12px;">🎤 Record</button>
+<button onclick="playRecording()">🔁 Replay</button>
+
+<br><br>
+
+<button onclick="nextItem()">➡️ Next</button>
+
+<p id="status" style="margin-top:10px;"></p>
+
+<script>
+
+// ======================
+// STATE
+// ======================
+
+let repetition = 0;
+const maxReps = 5;
+
+let currentList = [];
+let currentIndex = 0;
+
+let score = 0;
+let streak = 0;
+
+let mediaRecorder;
+let audioChunks = [];
+let recordedAudio;
+let stream = null;
+
+let isRecording = false;
+
+// ======================
+// WORDBANK
+// ======================
+
+const sets = {
+
+Letters: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+
+Numbers: ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100"],
+
+Numbers_Focus: ["13","30","14","40","15","50","16","60","17","70","18","80","19","90"],
+
+Minimal: ["Three","Tree","Free","8","H","Bad","Bed","Bid","Bet","Bag","Back","Cap","Cab","Cat","Cut","Cheap","Chip","Desk","Disk","Dog","Doc","Eat","It","Fan","Van","Fast","Vast","Feel","Fill","Fell","Hat","Hut","Man","Men","Mouse","Mouth","Not","Note","Pan","Pen","Pat","Bat","Pig","Big","Pin","Bin","Rice","Lice","Right","Light","Row","Low","Safe","Save","Seat","Sit","See","Seed","She","Sea","Sell","Shell","Sink","Think","Sleep","Slip","Tea","Key","Torn","Corn","Wet","Vet","You","Yours","Ship","Sheep","Live","Leave","Thank","Tank","Thin","Tin","Soccer","Saucer","Full","Fool"],
+
+Greetings: ["Bye","Cool!","Fantastic!","Goodbye","Great","Happy Birthday!","Hello","Hi!","Hooray!","Me Too!","No, Thank You","Oh Dear!","OK!","Pardon?","Please","See You!","So Do I!","Thanks","Thank You","Yes, Please","Well Done!","Wow!"],
+
+Family: ["Mother","Father","Mom","Dad","Brother","Sister","Parents","Grandmother","Grandfather","Grandma","Grandpa","Great-Grandmother","Great-Grandfather","Aunt","Uncle","Cousin","Niece","Nephew","Wife","Husband","Son","Daughter","Family"],
+
+Jobs: ["Doctor","Nurse","Dentist","Psychologist","Teacher","Professor","Student","Engineer","Civil Engineer","Systems Engineer","Industrial Engineer","Mechanical Engineer","Electrical Engineer","Architect","Accountant","Administrator","Manager","Assistant","Secretary","Lawyer","Police Officer","Soldier","Security Guard","Firefighter","Driver","Taxi Driver","Bus Driver","Delivery Driver","Pilot","Flight Attendant","Chef","Cook","Baker","Waiter","Waitress","Cashier","Shop Assistant","Store Clerk","Salesperson","Vendor","Street Vendor","Business Owner","Entrepreneur","Farmer","Fisherman","Miner","Construction Worker","Builder","Electrician","Plumber","Mechanic","Technician","IT Technician","Programmer","Developer","Designer","Graphic Designer","Photographer","Journalist","Reporter","Translator","Interpreter","Cleaner","Janitor","Housekeeper","Domestic Worker","Babysitter","Caregiver","Nanny","Hairdresser","Barber","Makeup Artist","Tailor","Dressmaker","Shoemaker","Artist","Musician","Singer","Actor","Athlete","Coach","Trainer","Gym Instructor","Tour Guide","Travel Agent","Receptionist","Hotel Worker","Cook Assistant","Kitchen Assistant","Warehouse Worker","Factory Worker","Machine Operator","Loader","Security Staff","Call Center Agent","Customer Service Representative","Office Worker","Government Worker","Public Employee","Bank Worker","Bank Teller","Real Estate Agent","Construction Supervisor","Site Engineer","Bricklayer","Carpenter","Welder","Painter","Gardener","Florist","Pet Groomer","Veterinarian","Pharmacist","Lab Technician","Radiology Technician","Nursing Assistant","Paramedic","Ambulance Driver","Recycler","Informal Worker","Freelancer","YouTuber","Content Creator","Influencer","Delivery App Driver","Motorcycle Driver","Courier","Food Delivery Worker"],
+
+Verbs: ["Answer","Ask","Be","Bounce","Can","Catch","Choose","Clap","Clean","Close","Color","Come","Complete","Count","Cross","Cry","Do","Draw","Drink","Drive","Eat","Enjoy","Find","Fly","Get","Give","Go","Go to Bed","Go to Sleep","Have","Have Got","Hit","Hold","Jump","Kick","Know","Learn","Like","Listen","Live","Look","Look at","Love","Make","Open","Paint","Phone","Pick Up","Play","Point","Put","Read","Ride","Run","Say","See","Show","Sing","Sit","Sleep","Smile","Spell","Stand","Start","Stop","Swim","Take a Photo","Talk","Tap","Tell","Throw","Tick","Try","Understand","Video","Walk","Want","Wash","Watch","Wave","Would Like","Write","Wake Up","Get Up","Take a Shower","Get Dressed","Comb Hair","Brush Teeth","Make the Bed","Cook","Have Breakfast","Have Lunch","Have Dinner","Leave Home","Go to School","Go to Work","Arrive","Study","Finish","Relax","Watch TV"],
+
+Adjectives: ["Angry","Beautiful","Big","Black","Blue","Brown","Clean","Closed","Cool","Correct","Dirty","Double","English","Fantastic","Favorite","Fun","Funny","Good","Gray","Great","Green","Grey","Happy","Her","His","Its","Little","Long","My","New","Nice","OK","Old","Open","Orange","Our","Paper","Pink","Purple","Red","Right","Sad","Scared","Scary","Short","Silly","Small","Sorry","Their","Tired","Ugly","White","Yellow","Young","Your"],
+
+Colors: ["Black","Blue","Brown","Gray","Green","Orange","Pink","Purple","Red","White","Yellow","Gold","Silver","Navy","Beige","Cream","Turquoise","Violet"],
+
+Food: ["Apple","Banana","Bean","Bread","Breakfast","Burger","Cake","Candy","Carrot","Cheese","Chicken","Chips","Chocolate","Coconut","Dinner","Drink","Egg","Fish","Food","Fries","Fruit","Grape","Ice Cream","Juice","Kiwi","Lemon","Lemonade","Lunch","Mango","Meat","Meatballs","Milk","Orange","Pea","Pear","Pie","Pizza","Potato","Rice","Salad","Tomato","Watermelon","Corn","Sweet Potato","Avocado","Chili Pepper","Onion","Garlic","Lime","Eggplant","Beans","Shrimp","Pork","Beef","Butter","Quinoa","Guava","Passion Fruit","Lucuma","Chicha Morada"],
+
+Home: ["Apartment","Armchair","Bath","Bathroom","Bathtub","Bed","Bedroom","Bookcase","Chair","Couch","Cupboard","Desk","Dining Room","Door","Floor","Garden","Hall","House","Kitchen","Living Room","Mat","Mirror","Painting","Poster","Room","Rug","Table","Wall","Window","Sofa","Television","Fridge","Stove","Oven","Microwave","Washing Machine","Lamp","Shelf","Sink","Toilet","Shower","Closet","Fan","Blender","Toaster"],
+
+School: ["Alphabet","Board","Book","Bookcase","Class","Classmate","Classroom","Computer","Crayon","Desk","Drawing","Eraser","Keyboard","Lesson","Letter","Page","Paper","Pen","Pencil","Playground","Question","Rubber","Ruler","School","Teacher","Whiteboard","Backpack","Notebook","Scissors","Glue","Folder","Marker","Uniform","Sharpener","Calculator","Dictionary","Map","Globe","Bell","Library","Cafeteria","Gym"],
+
+Places: ["Behind","Between","Bookshop","End","Here","In","In Front Of","On","Park","Playground","Shop","Store","Street","There","Under","Zoo","Market","Bakery","Pharmacy","Bank","Church","Hospital","School","Restaurant","Bus Stop","Plaza","Square","Police Station","Supermarket","Mall","Stadium","Gym","Bridge","Corner","Gas Station","Bodega"],
+
+Transport: ["Bike","Boat","Bus","Car","Helicopter","Motorbike","Plane","Scooter","Ship","Train","Truck","Van","Mototaxi","Combi","Taxi","Bicycle","Airport","Station","Stop","Ticket","Driver"],
+
+Time: ["In the Afternoon","On Your Birthday","Look at the Clock","During the Day","In the Evening","In the Morning","At Night","Today","On My Watch","Every Year"],
+
+Expressions: ["I Don't Know","I Think So","Maybe","Of Course","Excuse Me","No Problem","Just a Moment","It's Ok"],
+
+Sports_Leisure: ["Soccer","Basketball","Volleyball","Tennis","Swimming","Running","Cycling","Skateboarding","Surfing","Dancing","Karaoke","Music","Video Games","Watch TV","Gym","Park","Beach","Reading","Drawing","Ball","Baseball","Basketball","Bat","Beach","Bike","Boat","Book","Bounce","Camera","Catch","Doll","Draw","Drawing","Drive","Drum","Enjoy","Favorite","Fishing","Fly","Football","Game","Guitar","Hobby","Jump","Kick","Kite","Listen","Music","Paint","Painting","Party","Photo","Piano","Picture","Play","Read","Ride","Run","Scooter","Sing","Skateboard","Skateboarding","Soccer","Song","Sport","Story","Swim","Table Tennis","Take a Photo","Television","Tennis","Tennis Racket","Throw","Toy","Video","Video Game","Walk","Watch","Volleyball","Fronton","Surfing","Trekking","Dancing","Karaoke","Park","Gym","Stadium"],
+
+Clothes: ["Bag","Cap","Boots","Clothes","Coat","Dress","Glasses","Hat","Jeans","Shirt","Shoe","Shorts","Skirt","Sock","Pants","T-Shirt","Wear","Jacket","Sweater","Hoodie","Sneakers","Sandals","Belt","Watch","Uniform","Scarf","Gloves","Chullo","Poncho","Vest","Wallet","Purse","Backpack","Suit","Tie","Blouse","Flip-Flops"],
+
+Basic_Words: ["A","The","And","Or","But","Because","To","Of","For","With"],
+
+Pronouns: ["I","You","He","She","It","We","They"],
+
+Questions: ["What","Where","When","Who","Why","How"],
+
+Prepositions: ["In","On","At","Under","Over","Between","Behind","Next To","In Front Of"]
+
+};
+
+
+
+
+// ======================
+// TEMPLATE SYSTEM 
+// ======================
+
+const templates = {
+  phrases: [
+    "Hello, my name is {name}.",
+    "I am {number} years old.",
+    "I am from {place}.",
+    "I like {food}."
+  ]
+};
+
+const bank = {
+  name: ["John","Maria","Carlos","Ana"],
+    number: ["16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"],
+
+  place: ["Peru","Lima","Arequipa","Trujillo","Cusco","Chiclayo","Piura","Iquitos","Huancayo","Puno","Tacna","Ica","Pucallpa","Ayacucho","Cajamarca","Tarapoto","Chimbote","Huánuco","Tumbes","Moquegua"],
+
+  food: ["Apple","Banana","Bean","Bread","Breakfast","Burger","Cake","Candy","Carrot","Cheese","Chicken","Chips","Chocolate","Coconut","Dinner","Drink","Egg","Fish","Food","Fries","Fruit","Grape","Ice Ream","Juice","Kiwi","Lemon","Lemonade","Lunch","Mango","Meat","Meatballs","Milk","Orange","Pea","Pear","Pie","Pizza","Potato","Rice","Salad","Tomato","Watermelon","Corn","Sweet Potato","Avocado","Chili Pepper","Onion","Garlic","Lime","Eggplant","Beans","Shrimp","Pork","Beef","Butter","Quinoa","Guava","Passion Fruit","Lucuma","Chicha Morada"],
+
+};
+
+// 🔥 REQUIRED (this was missing)
+function pick(cat) {
+  const list = bank[cat];
+  if (!list) return "...";
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generate(text) {
+  return text.replace(/\{(\w+)\}/g, (_, key) => pick(key));
+}
+
+// ======================
+// STORAGE
+// ======================
+
+function saveProgress() {
+  localStorage.setItem("score", score);
+  localStorage.setItem("streak", streak);
+}
+
+function loadProgress() {
+  score = parseInt(localStorage.getItem("score")) || 0;
+  streak = parseInt(localStorage.getItem("streak")) || 0;
+}
+
+// ======================
+// START SET (FIXED ONLY)
+// ======================
+
+function startSet() {
+  const mode = document.getElementById("mode").value;
+
+  const map = {
+    letters: "Letters",
+    numbers: "Numbers",
+    numbers_focus: "Numbers_Focus",
+    minimal: "Minimal",
+    greetings: "Greetings",
+    expressions: "Expressions",
+    basic_words: "Basic_Words",
+    pronouns: "Pronouns",
+    questions: "Questions",
+    prepositions: "Prepositions",
+    family: "Family",
+    jobs: "Jobs",
+    verbs: "Verbs",
+    adjectives: "Adjectives",
+    colors: "Colors",
+    food: "Food",
+    home: "Home",
+    school: "School",
+    places: "Places",
+    transport: "Transport",
+    time: "Time",
+    sports_leisure: "Sports_Leisure",
+    clothes: "Clothes"
+  };
+
+  if (mode === "phrases") {
+    currentList = templates.phrases.map(generate); // ✅ FIXED
+  } else {
+    currentList = sets[map[mode]] || ["⚠️ No data"]; // uses YOUR sets
+  }
+
+  currentIndex = 0;
+  loadItem();
+}
+
+// ======================
+// LOAD
+// ======================
+
+function loadItem() {
+  repetition = 0;
+  updateCount();
+
+  const word = currentList[currentIndex] || "⚠️ Empty";
+
+  document.getElementById("word").innerText = word;
+  document.getElementById("status").innerText = "👉 Repeat 5 times / Repite 5 veces";
+
+  setTimeout(() => playAudio(1), 300);
+}
+
+// ======================
+// NEXT
+// ======================
+
+function nextItem() {
+  currentIndex++;
+  if (currentIndex >= currentList.length) currentIndex = 0;
+  loadItem();
+}
+
+// ======================
+// AUDIO
+// ======================
+
+function playAudio(rate) {
+  speechSynthesis.cancel();
+  const text = document.getElementById("word").innerText;
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.rate = rate;
+  speech.lang = "en-US";
+  speechSynthesis.speak(speech);
+}
+
+// ======================
+// RECORDING (MIC FIX)
+// ======================
+
+async function startRecording() {
+  if (isRecording) return;
+
+  try {
+    isRecording = true;
+
+    if (!stream) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+    mediaRecorder.onstop = () => {
+
+      recordedAudio = new Blob(audioChunks, { type: "audio/webm" });
+
+      repetition++;
+      updateCount();
+
+      if (repetition >= maxReps) {
+        score += 10;
+        streak++;
+
+        updateScore();
+        updateStreak();
+        saveProgress();
+
+        document.getElementById("status").innerText = "✅ Great! / ¡Excelente!";
+        setTimeout(nextItem, 1000);
+      } else {
+        giveFeedback();
+      }
+
+      isRecording = false;
+    };
+
+    mediaRecorder.start();
+    document.getElementById("status").innerText = "🎤 Recording... / Grabando...";
+
+    setTimeout(() => {
+      if (mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+    }, 2000);
+
+  } catch (err) {
+    isRecording = false;
+    document.getElementById("status").innerText = "❌ Microphone error";
+  }
+}
+
+// ======================
+// FEEDBACK
+// ======================
+
+function giveFeedback() {
+  if (repetition >= 4) {
+    document.getElementById("status").innerText = "🟢 Great! / Muy bien";
+  } else if (repetition >= 2) {
+    document.getElementById("status").innerText = "🟡 Keep going / Sigue";
+  } else {
+    document.getElementById("status").innerText = "🔴 Try again / Intenta otra vez";
+  }
+}
+
+// ======================
+// REPLAY
+// ======================
+
+function playRecording() {
+  if (!recordedAudio) return;
+  const url = URL.createObjectURL(recordedAudio);
+  new Audio(url).play();
+}
+
+// ======================
+// UI
+// ======================
+
+function updateCount() {
+  document.getElementById("count").innerText = repetition;
+}
+
+function updateScore() {
+  document.getElementById("score").innerText = score;
+}
+
+function updateStreak() {
+  document.getElementById("streak").innerText = streak;
+}
+
+// ======================
+// INIT
+// ======================
+
+loadProgress();
+updateScore();
+updateStreak();
+startSet();
+
+</script>
+
+</body>
+</html>
