@@ -1,27 +1,410 @@
-//<html>
-//<head>
- //   <title>Student Authentication Login</title>
-//</head>
-//<body>
-   // <h1>Student Login</h1>
-//    <form id="loginForm">
-//        <label for="name">Name:</label>
-//        <input type="text" id="name" name="name" required><br>
-//        <label for="classCode">Class Code:</label>
-//        <input type="text" id="classCode" name="classCode" required><br>
-//        <input type="submit" value="Login">
-//    </form>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Speaking Practice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  select { max-width: 90%; padding: 8px; font-size: 16px; }
+  .settings { margin: 10px 0; font-size: 14px; }
+  .settings label { margin: 0 10px; cursor: pointer; }
+</style>
+</head>
 
-//    <script>
-//        const form = document.getElementById('loginForm');
- //       form.onsubmit = function(event) {
-   //         event.preventDefault();
-     //       const name = document.getElementById('name').value;
-       //     const classCode = document.getElementById('classCode').value;
-            // Implement Login Logic
-            // Track student session
-            // Storage and transmission to backend
-//        };
-  //  </script>
-//</body>
-//</html>
+<body style="font-family: Arial; text-align:center; padding:20px;">
+
+<h2>🎧 Speaking Practice</h2>
+
+<p style="font-size:14px;">
+👉 Tap 🎤, speak, repeat 5 times<br>
+👉 Toca 🎤, habla y repite 5 veces<br>
+⭐ Earn points and build streaks
+</p>
+
+<!-- FIX 1: Grouped Dropdown -->
+<select id="mode" onchange="startSet()">
+  <optgroup label="📚 Basics">
+    <option value="Basic_Words">🧩 Basic Words</option>
+    <option value="Letters">🔤 Letters</option>
+    <option value="Numbers">🔢 Numbers</option>
+    <option value="Numbers_Focus">🎯 Numbers Focus</option>
+  </optgroup>
+  
+  <optgroup label="🗣️ Communication">
+    <option value="Greetings">👋 Greetings</option>
+    <option value="Expressions">💬 Expressions</option>
+    <option value="Questions">❓ Questions</option>
+    <option value="Sentences">🗣️ Sentences</option>
+    <option value="Pronouns">👤 Pronouns</option>
+  </optgroup>
+  
+  <optgroup label="🏠 Environment">
+    <option value="Appliances">🏠 Appliances</option>
+    <option value="House_and_Home">🏠 House & Home</option>
+    <option value="Places">📍 Places</option>
+    <option value="The_Natural_World">🌎 Nature</option>
+  </optgroup>
+  
+  <optgroup label="👕 Lifestyle">
+    <option value="Clothes_and_Accessories">👕 Clothes & Accessories</option>
+    <option value="Colors">🎨 Colors</option>
+    <option value="Food_and_Drink">🍔 Food & Drink</option>
+    <option value="Shopping">🛍️ Shopping</option>
+    <option value="Health_Medicine_and_Exercise">🧠 Health & Medicine</option>
+  </optgroup>
+  
+  <optgroup label="📖 Learning">
+    <option value="Education">🎓 Education</option>
+    <option value="School">🎓 School</option>
+    <option value="Verbs">🔁 Verbs</option>
+    <option value="Prepositions">📍 Prepositions</option>
+  </optgroup>
+  
+  <optgroup label="🌍 Advanced">
+    <option value="Communication_and_Technology">📱 Communication & Tech</option>
+    <option value="Documents_and_Texts">📄 Documents & Texts</option>
+    <option value="Entertainment_and_Media">🎬 Entertainment & Media</option>
+    <option value="Family_and_Friends">👨‍👩‍👧 Family & Friends</option>
+    <option value="Jobs_and_Work">👷 Jobs</option>
+    <option value="Measurements">📏 Measurements</option>
+    <option value="Minimal">🔊 Minimal Pairs</option>
+    <option value="Personal_Feelings_Opinions_and_Experiences">❤️ Feelings & Opinions</option>
+    <option value="Services">🛎️ Services</option>
+    <option value="Sports_Hobbies_and_Leisure">⚽ Sports & Leisure</option>
+    <option value="Time">⏰ Time</option>
+    <option value="Travel_and_Transport">🚌 Travel & Transport</option>
+    <option value="Weather">🌤️ Weather</option>
+    <option value="Phrases">🗣️ Phrases</option>
+  </optgroup>
+</select>
+
+<!-- FIX 3: Autoplay Toggle -->
+<div class="settings">
+  <label>
+    <input type="checkbox" id="autoplayToggle" checked onchange="saveAutoplay()">
+    🔊 Auto-play audio
+  </label>
+</div>
+
+<h1 id="word" style="font-size:42px; margin:20px;">Ready</h1>
+
+<p><b>🎯 You must repeat 5 times!</b><br><b>Debes repetir 5 veces</b></p>
+
+<p>Repetitions: <span id="count">0</span> / 5</p>
+<p>⭐ Score: <span id="score">0</span></p>
+<p>🔥 Streak: <span id="streak">0</span></p>
+
+<button onclick="playAudio(0.7)">🐢 Slow</button>
+<button onclick="playAudio(1)">⚡ Normal</button>
+
+<br><br>
+
+<button onclick="startRecording()" style="font-size:20px; padding:12px;">🎤 Record</button>
+<button onclick="playRecording()">🔁 Replay</button>
+
+<br><br>
+
+<button onclick="nextItem()">➡️ Next</button>
+
+<p id="status" style="margin-top:10px;"></p>
+
+<script>
+
+// ======================
+// STATE
+// ======================
+
+let repetition = 0;
+const maxReps = 5;
+
+let currentList = [];
+let currentIndex = 0;
+
+let score = 0;
+let streak = 0;
+
+let mediaRecorder;
+let audioChunks = [];
+let recordedAudio;
+let stream = null;
+
+let isRecording = false;
+let autoplay = true;
+
+// ======================
+// WORDBANK
+// ======================
+
+const sets = {
+
+Appliances: ["Camera", "Electric lamp", "Radio", "CD player", "Electricity", "Laptop", "Telephone", "Clock", "Fridge", "Lights", "Television", "Computer", "Gas", "Mobile phone", "TV", "Cooker", "Microwave", "Dishwasher", "Washing machine", "Vacuum cleaner"],
+Basic_Words: ["A","The","And","Or","But","Because","To","Of","For","With"],
+Clothes_and_Accessories: ["Backpack", "Bag", "Belt", "Blouse", "Boots", "Cap", "Chullo", "Clothes", "Coat", "Costume", "Dress", "Fashion", "Flip-Flops", "Glasses", "Gloves", "Hat", "Hoodie", "Jacket", "Jeans", "Jumper"],
+Colors: ["Beige", "Black", "Blue", "Brown", "Cream", "Dark brown", "Gold", "Gray", "Green", "Light brown", "Navy", "Orange", "Pink", "Purple", "Red", "Silver", "Turquoise", "Violet", "White", "Yellow"],
+Communication_and_Technology: ["Address", "At / @", "By post", "Call", "Camera", "CD player", "Chat", "Click", "Computer", "Conversation", "Digital", "Dot", "Download", "DVD player", "Email", "Emoticon", "Hardware", "Icon", "Internet", "Keyboard"],
+Documents_and_Texts: ["Advertisement", "Article", "Bill", "Book", "Card", "Diary", "Diploma", "Email", "Form", "Insurance", "Letter", "Licence", "Magazine", "Menu", "Message", "Newspaper", "Note", "Notice", "Novel", "Pamphlet"],
+Education: ["Advanced", "Beginner", "Board", "Book", "Bookshelf", "Classroom", "Clever", "Coach", "College", "Course", "Desk", "Dictionary", "Diploma", "English", "Examination", "Geography", "History", "Information", "Intelligence", "Knowledge"],
+Entertainment_and_Media: ["Act", "Actor", "Adventure", "Advertisement", "Art", "Article", "Book", "Card", "Cartoon", "CD player", "Cinema", "Circus", "Classical music", "Competition", "Concert", "Dance", "Director", "Documentary", "Drama", "DVD"],
+Expressions: ["I Don't Know","I Think So","Maybe","Of Course","Excuse Me","No Problem","Just a Moment","It's Ok"],
+Family_and_Friends: ["Aunt", "Boy", "Brother", "Child", "Cousin", "Dad", "Daddy", "Daughter", "Family", "Father", "Friend", "Friendly", "Girl", "Grandchild", "Granddad", "Granddaughter", "Grandfather", "Grandma", "Grandmother", "Grandpa"],
+Food_and_Drink: ["Apple", "Avocado", "Banana", "Barbecue", "Bean", "Beans", "Beef", "Biscuit", "Bit of cake", "Boil", "Bottle", "Bowl", "Box", "Bread", "Break", "Breakfast", "Burger", "Burn", "Butter", "Cake"],
+Greetings: ["Bye","Cool!","Fantastic!","Goodbye","Great","Happy Birthday!","Hello","Hi!","Hooray!","Me Too!","No, Thank You","Oh Dear!","OK!","Pardon?","Please","See You!","So Do I!","Thanks","Thank You","Welcome"],
+Health_Medicine_and_Exercise: ["Accident", "Ambulance", "Appointment", "Arm", "Baby", "Back", "Body", "Break", "Burn", "Check", "Chemist", "Clean", "Cold", "Comb", "Cut", "Danger", "Dangerous", "Dentist", "Diagnosis", "Disease"],
+House_and_Home: ["Address", "Apartment", "Armchair", "Bath", "Bathroom", "Bathtub", "Bed", "Bedroom", "Blanket", "Blender", "Bookcase", "Bookshelf", "Bowl", "Box", "Carpet", "Chair", "Clock", "Closet", "Clothes", "Coffeetable"],
+Jobs_and_Work: ["Accountant", "Actor", "Administrator", "Ambulance Driver", "Architect", "Artist", "Assistant", "Athlete", "Babysitter", "Baker", "Bank Teller", "Bank Worker", "Barber", "Boss", "Botanist", "Boxer", "Bricklayer", "Brewer", "Bus Driver", "Business Person"],
+Letters: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"],
+Measurements: ["Centimetre", "Day", "Degree", "Gramme", "Half", "Hour", "Kilogramme", "Kilometre", "Litre", "Metre", "Mile", "Minute", "Moment", "Quarter", "Second", "Temperature", "Week", "Year", "Yard", "Pound"],
+Minimal: ["Three","Tree","Free","8","H","Bad","Bed","Bid","Bet","Bag","Back","Cap","Cab","Cat","Cut","Cheap","Chip","Desk","Disk","Dog"],
+Numbers: ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","50","60","70","80","90","100","200","300","400","500","600","700","800","900","1000"],
+Numbers_Focus: ["13","30","14","40","15","50","16","60","17","70","18","80","19","90"],
+Personal_Feelings_Opinions_and_Experiences: ["Able", "Afraid", "Alone", "Amazing", "Angry", "Bad", "Beautiful", "Better", "Big", "Black", "Blue", "Bored", "Boring", "Brilliant", "Brown", "Busy", "Careful", "Calm", "Capable", "Careless"],
+Places: ["Airport", "Apartment", "Area", "Bakery", "Bank", "Beach", "Behind", "Between", "Bodega", "Bookshop", "Bridge", "Building", "Bus station", "Bus stop", "Cafe", "Campsite", "Canal", "Carpark", "Castle", "Cathedral"],
+Prepositions: ["In","On","At","Under","Over","Between","Behind","Next To","In Front Of"],
+Pronouns: ["I","You","He","She","It","We","They"],
+Questions: ["What","Where","When","Who","Why","How"],
+School: ["Alphabet","Board","Book","Bookcase","Class","Classmate","Classroom","Computer","Crayon","Desk","Drawing","Eraser","Keyboard","Lesson","Letter","Page","Paper","Pen","Pencil","Playground"],
+Sentences: ["Check, please","Menu, please","No spice","Not spicy","The bill","Vegan","Vegetarian","Water, please","Call an ambulance","I need a doctor","I'm injured","I'm sick","Where is the pharmacy","I have a headache","I have a fever"],
+Services: ["Bank", "Café", "Cinema", "Dentist", "Doctor", "Garage", "Hairdresser", "Hotel", "Library", "Museum", "Post office", "Restaurant", "Sports centre", "Swimming pool", "Theatre", "Tourist office"],
+Shopping: ["Advertisement", "Assistant", "Bill", "Bookshop", "Buy", "Cash", "Cent", "Change", "Cheap", "Cheque", "Close", "Closed", "Cost", "Credit card", "Customer", "Department store", "Dollar", "Expensive", "Fitting room", "Food court"],
+Sports_Hobbies_and_Leisure: ["Ball", "Ball game", "Barbecue", "Baseball", "Basketball", "Bat", "Beach", "Bicycle", "Bike", "Boat", "Book", "Bounce", "Camera", "Camp", "Campsite", "Catch", "CD player", "Celebrate", "Celebration", "Champ"],
+The_Natural_World: ["Air", "Beach", "Countryside", "Country", "East", "Explore", "Field", "Fire", "Flower", "Forest", "Grass", "Grow", "Hill", "Hot", "Ice", "Island", "Lake", "Moon", "Mountain", "Mud"],
+Time: ["a.m.", "Afternoon", "Appointment", "At Night", "Autumn", "Birthday", "Century", "Clock", "Daily", "Date", "Day", "Diary", "During the Day", "Evening", "Every Year", "Half past", "Holidays", "Holiday", "Hour", "Last Year"],
+Travel_and_Transport: ["plane", "Airport", "Ambulance", "Bicycle", "Bike", "Boat", "Brake", "Bridge", "Bus", "Bus station", "Bus stop", "Canal", "Car", "Coach", "Combi", "Country", "Crossing", "Cruise", "Currency", "Customs"],
+Verbs: ["Answer","Ask","Be","Bounce","Can","Catch","Choose","Clap","Clean","Close","Color","Come","Complete","Count","Cross","Cry","Do","Draw","Drink","Drive","Eat","Enjoy","Find","Fly","Get","Give","Go","Grow","Happen","Have","Help","Hold","Invite","Jump","Keep","Know","Leave","Let","Like","Listen","Live","Look","Love","Make","Mean","Miss","Move","Need","Notice","Open","Pay","Pick","Play","Point","Prefer","Pull","Push","Put","Question","Reach","Read","Remember","Repeat","Rest","Return","Ride","Run","Say","See","Seem","Sell","Send","Serve","Set","Share","Show","Shrug","Shut","Sit","Smile","Speak","Spend","Stand","Start","State","Stay","Step","Stick","Stop","Study","Succeed","Suggest","Suppose","Swim","Take","Talk","Teach","Tell","Thank","Think","Throw","Touch","Travel","Try","Turn","Understand","Use","Visit","Wait","Walk","Want","Wash","Watch","Wear","Welcome","Work","Write"],
+Weather: ["Autumn", "Cloud", "Cloudy", "Cold", "Fog", "Foggy", "Hot", "Ice", "Rain", "Snow", "Spring", "Storm", "Summer", "Sun", "Sunny", "Thunderstorm", "Warm", "Weather", "Wet", "Wind"],
+
+};
+
+// ======================
+// TEMPLATE SYSTEM
+// ======================
+
+const templates = {
+phrases: [
+"Hello, my name is {name}.",
+"I am {number} years old.",
+"I am from {place}.",
+"I like {food}.",
+"I live in {place}.",
+"I want {food}.",
+"I have {number} books.",
+"This is {name}."
+]
+};
+
+const bank = {
+name: ["John","Maria","Carlos","Ana"],
+number: ["16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"],
+place: ["Peru","Lima","Arequipa","Trujillo","Cusco","Chiclayo","Piura","Iquitos","Huancayo","Puno","Tacna","Ica","Pucallpa","Ayacucho","Cajamarca","Tarapoto","Chimbote","Huánuco","Tumbes","Moquegua"],
+food: ["Apple","Banana","Bean","Bread","Breakfast","Burger","Cake","Candy","Carrot","Cheese","Chicken","Chips","Chocolate","Coconut","Dinner","Drink","Egg","Fish","Food","Fries","Fruit","Grape","Hamburger","Honey","Hotdog","Jam","Juice","Ketchup","Lemon","Lunch","Mayonnaise","Meat","Milk","Mustard","Noodles","Nuts","Oil","Orange","Pancake","Pasta","Peach","Peanut","Pear","Peas","Pepper","Pickle","Pie","Pig","Pizza","Plate","Plum","Popcorn","Pork","Potato","Prawn","Pudding","Pumpkin","Puri","Ravioli","Rice","Roast","Salt","Salad","Salmon","Sandwich","Sauce","Sausage","Seafood","Seasoning","Shellfish","Shrimp","Snack","Soft drink","Soup","Sour cream","Spaghetti","Spinach","Spoon","Spread","Steak","Stew","Stock","Strawberry","Stuffing","Sushi","Sugar","Supper"],
+};
+
+function pick(cat) {
+  const list = bank[cat] || ["..."];
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generate(text) {
+  return text.replace(/\{(\w+)\}/g, (_, key) => pick(key));
+}
+
+// ======================
+// STORAGE
+// ======================
+
+function saveProgress() {
+   localStorage.setItem("score", score);
+   localStorage.setItem("streak", streak);
+}
+
+function loadProgress() {
+   score = parseInt(localStorage.getItem("score")) || 0;
+   streak = parseInt(localStorage.getItem("streak")) || 0;
+}
+
+function saveAutoplay() {
+  autoplay = document.getElementById("autoplayToggle").checked;
+  localStorage.setItem("autoplay", autoplay);
+}
+
+function loadAutoplay() {
+  const saved = localStorage.getItem("autoplay");
+  autoplay = saved === null ? true : saved === "true";
+  document.getElementById("autoplayToggle").checked = autoplay;
+}
+
+// ======================
+// START SET
+// ======================
+
+function startSet() {
+   const mode = document.getElementById("mode").value;
+
+   if (mode === "Phrases") {
+     currentList = templates.phrases.map(generate);
+   } else {
+     currentList = sets[mode] || [];
+   }
+
+   if (!Array.isArray(currentList) || currentList.length === 0) {
+     document.getElementById("word").innerText = "⚠️ No data yet";
+     return;
+   }
+
+   currentIndex = 0;
+   loadItem();
+}
+
+// ======================
+// LOAD
+// ======================
+
+function loadItem() {
+   repetition = 0;
+   updateCount();
+
+   const word = currentList[currentIndex] || "...";
+   document.getElementById("word").innerText = word;
+
+   document.getElementById("status").innerText =
+     "👉 Repeat 5 times / Repite 5 veces";
+
+   if (autoplay) {
+     setTimeout(() => playAudio(1), 300);
+   }
+}
+
+// ======================
+// NEXT
+// ======================
+
+function nextItem() {
+   currentIndex++;
+   if (currentIndex >= currentList.length) currentIndex = 0;
+   loadItem();
+}
+
+// ======================
+// AUDIO
+// ======================
+
+function playAudio(rate) {
+   speechSynthesis.cancel();
+   const text = document.getElementById("word").innerText;
+   const speech = new SpeechSynthesisUtterance(text);
+   speech.rate = rate;
+   speech.lang = "en-US";
+   speechSynthesis.speak(speech);
+}
+
+// ======================
+// RECORDING
+// ======================
+
+async function startRecording() {
+   if (isRecording) return;
+
+   try {
+     isRecording = true;
+
+     if (!stream) {
+       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+     }
+
+     mediaRecorder = new MediaRecorder(stream);
+     audioChunks = [];
+
+     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+     mediaRecorder.onstop = () => {
+
+       recordedAudio = new Blob(audioChunks, { type: "audio/webm" });
+
+       repetition++;
+       updateCount();
+
+       if (repetition >= maxReps) {
+         score += 10;
+         streak++;
+
+         updateScore();
+         updateStreak();
+         saveProgress();
+
+         document.getElementById("status").innerText = "✅ Great!";
+         setTimeout(nextItem, 1000);
+       } else {
+         giveFeedback();
+       }
+
+       isRecording = false;
+     };
+
+     mediaRecorder.start();
+     document.getElementById("status").innerText = "🎤 Recording...";
+
+     setTimeout(() => {
+       if (mediaRecorder.state !== "inactive") {
+         mediaRecorder.stop();
+       }
+     }, 2000);
+
+   } catch (err) {
+     isRecording = false;
+     document.getElementById("status").innerText = "❌ Mic error";
+   }
+}
+
+// ======================
+// FEEDBACK
+// ======================
+
+function giveFeedback() {
+   if (repetition >= 4) {
+     document.getElementById("status").innerText = "🟢 Great!";
+   } else if (repetition >= 2) {
+     document.getElementById("status").innerText = "🟡 Keep going";
+   } else {
+     document.getElementById("status").innerText = "🔴 Try again";
+   }
+}
+
+// ======================
+// REPLAY
+// ======================
+
+function playRecording() {
+   if (!recordedAudio) return;
+   const url = URL.createObjectURL(recordedAudio);
+   new Audio(url).play();
+}
+
+// ======================
+// UI
+// ======================
+
+function updateCount() {
+   document.getElementById("count").innerText = repetition;
+}
+
+function updateScore() {
+   document.getElementById("score").innerText = score;
+}
+
+function updateStreak() {
+   document.getElementById("streak").innerText = streak;
+}
+
+// ======================
+// INIT
+// ======================
+
+loadProgress();
+loadAutoplay();
+updateScore();
+updateStreak();
+startSet();
+
+</script>
+
+</body>
+</html>
